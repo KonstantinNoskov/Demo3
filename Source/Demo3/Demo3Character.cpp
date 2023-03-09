@@ -12,6 +12,8 @@
 //////////////////////////////////////////////////////////////////////////
 // ADemo3Character
 
+// Constructor
+#pragma region Consctructor
 ADemo3Character::ADemo3Character()
 {
 	// Set size for collision capsule
@@ -46,10 +48,10 @@ ADemo3Character::ADemo3Character()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 }
+#pragma endregion
 
-//////////////////////////////////////////////////////////////////////////
 // Input
-
+#pragma  region  Input
 void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
@@ -71,23 +73,10 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ADemo3Character::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ADemo3Character::TouchStopped);
-
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ADemo3Character::OnResetVR);
 }
 
-
-void ADemo3Character::OnResetVR()
-{
-	// If Demo3 is added to a project via 'Add Feature' in the Unreal Editor the dependency on HeadMountedDisplay in Demo3.Build.cs is not automatically propagated
-	// and a linker error will result.
-	// You will need to either:
-	//		Add "HeadMountedDisplay" to [YourProject].Build.cs PublicDependencyModuleNames in order to build successfully (appropriate if supporting VR).
-	// or:
-	//		Comment or delete the call to ResetOrientationAndPosition below (appropriate if not supporting VR)
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
-}
-
+// Jump 
+#pragma region Jump
 void ADemo3Character::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
 		Jump();
@@ -97,7 +86,10 @@ void ADemo3Character::TouchStopped(ETouchIndex::Type FingerIndex, FVector Locati
 {
 		StopJumping();
 }
+#pragma endregion
 
+// Look
+#pragma region Look
 void ADemo3Character::TurnAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
@@ -109,7 +101,10 @@ void ADemo3Character::LookUpAtRate(float Rate)
 	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
+#pragma endregion  
 
+// Move
+#pragma region Move
 void ADemo3Character::MoveForward(float Value)
 {
 	if ((Controller != nullptr) && (Value != 0.0f))
@@ -138,3 +133,6 @@ void ADemo3Character::MoveRight(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
+#pragma endregion
+
+#pragma endregion 
