@@ -4,14 +4,23 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Demo3Character.generated.h"
 
 UCLASS(config=Game)
+
 class ADemo3Character : public ACharacter
 {
 	GENERATED_BODY()
 
+//Added Components
+#pragma region Components
+	
+protected:
+	/** CMC for Demo3Character */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Movement)
+	class UDemo3MovementComponent* Demo3MovementComponent;
+
+private:
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class USpringArmComponent* CameraBoom;
@@ -19,8 +28,11 @@ class ADemo3Character : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
+#pragma endregion
+	
 public:
-	ADemo3Character();
+	ADemo3Character(const FObjectInitializer& ObjectInitializer);
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
@@ -43,6 +55,9 @@ protected:
 	 * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
 	 */
 	void TurnAtRate(float Rate);
+
+	void Sprint_Start();
+	void Sprint_End();
 
 	/**
 	 * Called via input to turn look up/down at a given rate. 
@@ -67,29 +82,6 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-// Client/Server
-#pragma region Client/Server
-
-	class FSavedMove_Demo3 : public FSavedMove_Character
-	{
-		typedef FSavedMove_Character Super;
-
-		uint8 Saved_bWantsToSprint:1;
-
-		virtual bool CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* InCharacter, float MaxDelta) const override;
-		virtual void Clear() override;
-		virtual uint8 GetCompressedFlags() const override;
-		virtual void SetMoveFor(ACharacter* C, float InDeltaTime, FVector const& NewAccel, FNetworkPredictionData_Client_Character& ClientData) override;
-		virtual void PrepMoveFor(ACharacter* C) override;
-		
-	};
-
-
-#pragma endregion
 	
-// Sprint
-#pragma region Sprint
-
-	bool Safe_bWantsToSprint;
 };
 

@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "Demo3Character.h"
+
+#include "Demo3MovementComponent.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -14,8 +16,12 @@
 
 // Constructor
 #pragma region Consctructor
-ADemo3Character::ADemo3Character()
+
+ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDemo3MovementComponent>(ACharacter::CharacterMovementComponentName))
 {
+	Demo3MovementComponent = Cast<UDemo3MovementComponent>(GetCharacterMovement());
+	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
@@ -29,10 +35,10 @@ ADemo3Character::ADemo3Character()
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
-	GetCharacterMovement()->JumpZVelocity = 600.f;
-	GetCharacterMovement()->AirControl = 0.2f;
+	Demo3MovementComponent->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	Demo3MovementComponent->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
+	Demo3MovementComponent->JumpZVelocity = 600.f;
+	Demo3MovementComponent->AirControl = 0.2f;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -59,6 +65,9 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
+	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADemo3Character::Sprint_Start);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADemo3Character::Sprint_End);
+	
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADemo3Character::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADemo3Character::MoveRight);
 
@@ -73,6 +82,15 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ADemo3Character::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ADemo3Character::TouchStopped);
+}
+
+void ADemo3Character::Sprint_Start()
+{
+	Demo3MovementComponent->SprintPressed();
+}
+void ADemo3Character::Sprint_End()
+{
+	Demo3MovementComponent->SprintReleased();
 }
 
 // Jump 
