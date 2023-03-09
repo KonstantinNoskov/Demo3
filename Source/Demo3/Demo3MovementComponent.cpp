@@ -6,7 +6,9 @@
 UDemo3MovementComponent::UDemo3MovementComponent()
 {
 	Base_MaxWalkSpeed = MaxWalkSpeed;
-}
+
+	NavAgentProps.bCanCrouch = true;
+};
 
 // Client/Server setups
 #pragma region Client/Server
@@ -124,6 +126,16 @@ void UDemo3MovementComponent::SprintPressed()
 void UDemo3MovementComponent::SprintReleased()
 {
 	Safe_bWantsToSprint = false;
+}
+
+#pragma endregion 
+
+// Crouch
+#pragma region Crouch
+
+void UDemo3MovementComponent::CrouchPressed()
+{
+	bWantsToCrouch = !bWantsToCrouch;
 }
 
 #pragma endregion 

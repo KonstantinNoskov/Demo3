@@ -55,8 +55,8 @@ protected:
 	bool Safe_bWantsToSprint;
 	
 public:
-	UFUNCTION(BlueprintCallable) void SprintPressed();
-	UFUNCTION(BlueprintCallable) void SprintReleased();
+	void SprintPressed();
+	void SprintReleased();
 
 	UPROPERTY(EditDefaultsOnly) float Sprint_MaxWalkSpeed;
 	float Base_MaxWalkSpeed;
@@ -64,5 +64,15 @@ public:
 protected:
 	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
 
+#pragma endregion
+
+//Crouch
+#pragma region Crouch
+	
+public:
+	void CrouchPressed();
+
 #pragma endregion 
 };
+
+

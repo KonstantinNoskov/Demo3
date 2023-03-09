@@ -21,7 +21,7 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDemo3MovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	Demo3MovementComponent = Cast<UDemo3MovementComponent>(GetCharacterMovement());
-	
+		
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
@@ -67,6 +67,8 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADemo3Character::Sprint_Start);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADemo3Character::Sprint_End);
+
+	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ADemo3Character::Crouch_Toggle);
 	
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADemo3Character::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADemo3Character::MoveRight);
@@ -91,6 +93,11 @@ void ADemo3Character::Sprint_Start()
 void ADemo3Character::Sprint_End()
 {
 	Demo3MovementComponent->SprintReleased();
+}
+
+void ADemo3Character::Crouch_Toggle()
+{
+	Demo3MovementComponent->CrouchPressed();
 }
 
 // Jump 
