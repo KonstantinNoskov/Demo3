@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "Demo3Character.h"
 
 #include "Demo3MovementComponent.h"
@@ -10,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "ThirdParty/PhysX3/NvCloth/samples/external/imgui/1.49/imgui.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ADemo3Character
@@ -56,6 +55,21 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 }
 #pragma endregion
 
+
+// Функция исключает вероятность срабатывание лайнтрейса на колизию самого персонажа или его потомков. 
+FCollisionQueryParams ADemo3Character::GetIgnoreCharacterParams() const
+{
+	FCollisionQueryParams Params;
+	TArray<AActor*> CharacterChildren;
+	GetAllChildActors(CharacterChildren);
+	Params.AddIgnoredActors(CharacterChildren);
+	Params.AddIgnoredActor(this);
+
+	return Params;
+}
+
+
+
 // Input
 #pragma  region  Input
 void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -64,6 +78,10 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	check(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
+	
+	PlayerInputComponent->BindAction("Slide", IE_Pressed, this, &ADemo3Character::SlideStart);
+
+	PlayerInputComponent->BindAction("Walk", IE_Pressed, this, &ADemo3Character::Walk_Toggle);
 
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADemo3Character::Sprint_Start);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADemo3Character::Sprint_End);
@@ -86,6 +104,22 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	PlayerInputComponent->BindTouch(IE_Released, this, &ADemo3Character::TouchStopped);
 }
 
+void ADemo3Character::SlideStart()
+{
+	Demo3MovementComponent->EnterSlide();
+}
+
+// Walk
+#pragma region Walk
+void ADemo3Character::Walk_Toggle()
+{
+	Demo3MovementComponent->WalkPressed();
+}
+
+#pragma endregion
+
+// Sprint
+#pragma region Sprint
 void ADemo3Character::Sprint_Start()
 {
 	Demo3MovementComponent->SprintPressed();
@@ -99,6 +133,8 @@ void ADemo3Character::Crouch_Toggle()
 {
 	Demo3MovementComponent->CrouchPressed();
 }
+
+#pragma endregion 
 
 // Jump 
 #pragma region Jump
@@ -120,13 +156,13 @@ void ADemo3Character::TurnAtRate(float Rate)
 	// calculate delta for this frame from the rate information
 	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
 }
-
 void ADemo3Character::LookUpAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
 	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
 }
-#pragma endregion  
+
+#pragma endregion
 
 // Move
 #pragma region Move

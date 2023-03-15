@@ -57,6 +57,8 @@ protected:
 	 */
 	void TurnAtRate(float Rate);
 
+	void Walk_Toggle();
+	
 	void Sprint_Start();
 	void Sprint_End();
 
@@ -86,6 +88,11 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	/** Returns Demo3MovementComponent subobject **/
 	FORCEINLINE class UDemo3MovementComponent* GetDemo3MovementComponent() const { return Demo3MovementComponent; }
-	
+
+
+	// Функция исключает вероятность срабатывание лайнтрейса на колизию самого персонажа или его потомков. 
+	FCollisionQueryParams GetIgnoreCharacterParams() const;
+
+	void SlideStart();
 };
 
