@@ -4,6 +4,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Demo3MovementComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDashStartDelegate);
+
+
 UENUM(BlueprintType)
 enum ECustomMovementMode
 {
@@ -21,20 +24,35 @@ class DEMO3_API UDemo3MovementComponent : public UCharacterMovementComponent
 	GENERATED_BODY()
 	UDemo3MovementComponent();
 
+// Parameters
 #pragma region Params
 	
 protected:
 	virtual void InitializeComponent() override;
 
-	// Parameters
-	UPROPERTY(EditDefaultsOnly) float Sprint_MaxSpeed = 750.f;
+	// Sprint
+	UPROPERTY(EditDefaultsOnly, Category=Sprint) float Sprint_MaxSpeed = 750.f;
 	float Base_MaxWalkSpeed = MaxWalkSpeed;
 
+	// Dash
+	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashImpulse = 1000.f;
+	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashCooldownDuration = 1.f;
+
+	// Safe Variables
 	bool Safe_bWantsToSprint;
-	bool IsCustomMovementMode(ECustomMovementMode InCustomMovementMode) const;
+	bool Safe_bWantsToDash;
+
+	// Working Variables
+	float DashStartTime;
 	
 	// Transient
 	UPROPERTY(Transient) ADemo3Character* Demo3CharacterOwner;
+
+	// Delegates
+	FDashStartDelegate DashStartDelegate;
+
+	// Timers
+	FTimerHandle TimerHandle_DashCooldown;
 
 #pragma endregion
 	
@@ -54,10 +72,9 @@ protected:
 		
 		typedef FSavedMove_Character Super;
 	
-		// This is a Flag...
+		// Server's Flags
 		uint8 Saved_bWantsToSprint:1;
-		
-		// Other Variables
+		uint8 Saved_bWantsToDash:1;
 		
 		virtual bool CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* InCharacter, float MaxDelta) const override;
 		virtual void Clear() override;
@@ -79,8 +96,9 @@ protected:
 public:
 	virtual FNetworkPredictionData_Client* GetPredictionData_Client() const override;
 
+#pragma endregion 
 
-// General helping function's
+// Helping functions
 public:
 	virtual bool IsMovingOnGround() const override;
 	virtual bool CanCrouchInCurrentState() const override;
@@ -90,32 +108,49 @@ protected:
 	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
 	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
-
 	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;
 	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
 
 	bool IsMovementMode(EMovementMode InMovementMode) const;
+	bool IsCustomMovementMode(ECustomMovementMode InCustomMovementMode) const;
+
+#pragma endregion
+
+// Input Interface
+#pragma region Sprint
+
+public:
+	UFUNCTION(BlueprintCallable) void SprintPressed();
+	UFUNCTION(BlueprintCallable) void SprintReleased();
+
+	UFUNCTION(BlueprintCallable) void CrouchPressed();
+
+	UFUNCTION(BlueprintCallable) void DashPressed();
+	UFUNCTION(BlueprintCallable) void DashReleased();
 
 #pragma endregion
 	
 // Sprint
 #pragma region Sprint
-	
-public:
-	void SprintPressed();
-	void SprintReleased();
 
 #pragma endregion
 
-//Crouch
+// Crouch
 #pragma region Crouch
 	
-public:
-	UFUNCTION(BlueprintCallable) void CrouchPressed();
 
 #pragma endregion
 
-#pragma endregion
+// Dash
+#pragma region Dash
+	
+private:
+	void OnDashCooldown();
+	bool CanDash() const;
+	void PerformDash();
+
+#pragma endregion 
+	 
 };
 
 

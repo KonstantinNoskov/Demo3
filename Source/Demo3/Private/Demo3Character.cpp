@@ -13,6 +13,7 @@
 //////////////////////////////////////////////////////////////////////////
 // ADemo3Character
 
+
 // Constructor
 #pragma region Consctructor
 
@@ -54,7 +55,12 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 }
 
-#pragma endregion
+#pragma endregion 
+
+void ADemo3Character::BeginPlay()
+{
+	Super::BeginPlay();
+}
 
 // Input
 #pragma  region  Input
@@ -65,10 +71,13 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADemo3Character::Sprint_Start);
-	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADemo3Character::Sprint_End);
+	PlayerInputComponent->BindAction("Sprint", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::SprintPressed);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, Demo3MovementComponent, &UDemo3MovementComponent::SprintReleased);
 
-	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ADemo3Character::Crouch_Toggle);
+	PlayerInputComponent->BindAction("Crouch", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::CrouchPressed);
+
+	PlayerInputComponent->BindAction("Dash", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::DashPressed);
+	PlayerInputComponent->BindAction("Dash", IE_Released, Demo3MovementComponent, &UDemo3MovementComponent::DashReleased);
 	
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADemo3Character::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADemo3Character::MoveRight);
@@ -87,30 +96,6 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 }
 
 #pragma endregion
-
-// Sprint
-#pragma region Sprint
-
-void ADemo3Character::Sprint_Start()
-{
-	Demo3MovementComponent->SprintPressed();
-}
-void ADemo3Character::Sprint_End()
-{
-	Demo3MovementComponent->SprintReleased();
-}
-
-#pragma endregion 
-
-// Crouch
-#pragma region Crouch
-
-void ADemo3Character::Crouch_Toggle()
-{
-	Demo3MovementComponent->CrouchPressed();	
-}
-
-#pragma endregion 
 
 // Jump 
 #pragma region Jump

@@ -8,10 +8,15 @@ class UDemo3MovementComponent;
 
 UCLASS(config=Game)
 
+
+
 class ADemo3Character : public ACharacter
 {
 	GENERATED_BODY()
 
+	virtual void BeginPlay() override;
+
+// Linked Components
 #pragma region Components
 	
 protected:
@@ -42,11 +47,6 @@ protected:
 	void MoveRight(float Value);
 	
 	void TurnAtRate(float Rate);
-	
-	void Sprint_Start();
-	void Sprint_End();
-
-	void Crouch_Toggle();
 	
 	void LookUpAtRate(float Rate);
 	
