@@ -71,6 +71,8 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
+	PlayerInputComponent->BindAction("Walk", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::WalkToggle);
+
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::SprintPressed);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, Demo3MovementComponent, &UDemo3MovementComponent::SprintReleased);
 

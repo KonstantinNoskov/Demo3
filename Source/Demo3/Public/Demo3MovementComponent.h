@@ -11,6 +11,7 @@ UENUM(BlueprintType)
 enum ECustomMovementMode
 {
 	CMOVE_None		UMETA(Hidden),
+	CMOVE_Walk		UMETA(DisplayName = "Walk"),
 	CMOVE_Sprint	UMETA(DisplayName = "Sprint"),
 	CMOVE_Dash		UMETA(DisplayName = "Dash"),
 	CMOVE_MAX		UMETA(Hidden)
@@ -30,6 +31,10 @@ class DEMO3_API UDemo3MovementComponent : public UCharacterMovementComponent
 protected:
 	virtual void InitializeComponent() override;
 
+	// Walk
+	UPROPERTY(EditDefaultsOnly, Category=Sprint) float Walk_MaxSpeed = 200.f;
+	float BaseSpeed = GetMaxSpeed();
+	
 	// Sprint
 	UPROPERTY(EditDefaultsOnly, Category=Sprint) float Sprint_MaxSpeed = 750.f;
 	float Base_MaxWalkSpeed = MaxWalkSpeed;
@@ -37,9 +42,10 @@ protected:
 	// Dash
 	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashImpulse = 1000.f;
 	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashCooldownDuration = 1.f;
-
+	
 	// Safe Variables
 	bool Safe_bWantsToSprint;
+	bool Safe_bWantsToWalk;
 	bool Safe_bWantsToDash;
 
 	// Working Variables
@@ -54,6 +60,7 @@ protected:
 	// Timers
 	FTimerHandle TimerHandle_DashCooldown;
 
+
 #pragma endregion
 	
 	// Client/Server setups
@@ -64,15 +71,16 @@ protected:
 	public:
 		enum CompressedFlags
 		{
-			FLAG_Sprint		= 0x10,
-			FLAG_Dash		= 0x20,
-			FLAG_Custom_2	= 0x40,
+			FLAG_Walk		= 0x10,
+			FLAG_Sprint		= 0x20,
+			FLAG_Dash		= 0x40,
 			FLAG_Custom_3	= 0x80
 		};
 		
 		typedef FSavedMove_Character Super;
 	
 		// Server's Flags
+		uint8 Saved_bWantsToWalk:1;
 		uint8 Saved_bWantsToSprint:1;
 		uint8 Saved_bWantsToDash:1;
 		
@@ -110,9 +118,11 @@ protected:
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;
 	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
+	
 
 	bool IsMovementMode(EMovementMode InMovementMode) const;
-	bool IsCustomMovementMode(ECustomMovementMode InCustomMovementMode) const;
+	UFUNCTION(BlueprintPure)bool IsCustomMovementMode(ECustomMovementMode InCustomMovementMode) const;
+
 
 #pragma endregion
 
@@ -120,6 +130,8 @@ protected:
 #pragma region Sprint
 
 public:
+	UFUNCTION(BlueprintCallable) void WalkToggle();
+	
 	UFUNCTION(BlueprintCallable) void SprintPressed();
 	UFUNCTION(BlueprintCallable) void SprintReleased();
 
