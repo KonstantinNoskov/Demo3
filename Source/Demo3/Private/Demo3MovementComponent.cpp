@@ -25,7 +25,7 @@ bool UDemo3MovementComponent::FSavedMove_Demo3::CanCombineWith(const FSavedMoveP
 {
 	FSavedMove_Demo3* NewDemo3Move = static_cast<FSavedMove_Demo3*>(NewMove.Get());
 
-	//if (Saved_bWantsToWalk != NewDemo3Move->Saved_bWantsToDash)		return false;
+	if (Saved_bWantsToWalk != NewDemo3Move->Saved_bWantsToWalk)		return false;
 	if (Saved_bWantsToSprint != NewDemo3Move->Saved_bWantsToSprint) return false;
 	if (Saved_bWantsToDash != NewDemo3Move->Saved_bWantsToDash)		return false;
 	
@@ -37,7 +37,7 @@ void UDemo3MovementComponent::FSavedMove_Demo3::Clear()
 {
 	FSavedMove_Character::Clear();
 
-	//Saved_bWantsToWalk		= 0;
+	Saved_bWantsToWalk		= 0;
 	Saved_bWantsToSprint	= 0;
 	Saved_bWantsToDash		= 0;
 	
@@ -47,7 +47,7 @@ uint8 UDemo3MovementComponent::FSavedMove_Demo3::GetCompressedFlags() const
 {
 	uint8 Result = Super::GetCompressedFlags();
 
-	//if (Saved_bWantsToDash ) Result		|= FLAG_Walk;
+	if (Saved_bWantsToDash ) Result		|= FLAG_Walk;
 	if (Saved_bWantsToSprint) Result	|= FLAG_Sprint;
 	if (Saved_bWantsToDash ) Result		|= FLAG_Dash;
 	
@@ -61,7 +61,7 @@ void UDemo3MovementComponent::FSavedMove_Demo3::SetMoveFor(ACharacter* C, float 
 
 	UDemo3MovementComponent* Demo3MovementComponent = Cast<UDemo3MovementComponent>(C->GetCharacterMovement());
 
-	//Saved_bWantsToWalk = Demo3MovementComponent->Safe_bWantsToWalk;
+	Saved_bWantsToWalk = Demo3MovementComponent->Safe_bWantsToWalk;
 	Saved_bWantsToSprint = Demo3MovementComponent->Safe_bWantsToSprint;
 	Saved_bWantsToDash = Demo3MovementComponent->Safe_bWantsToDash;
 }
@@ -72,7 +72,7 @@ void UDemo3MovementComponent::FSavedMove_Demo3::PrepMoveFor(ACharacter* C)
 
 	UDemo3MovementComponent* Demo3MovementComponent = Cast<UDemo3MovementComponent>(C->GetCharacterMovement());
 
-	//Demo3MovementComponent->Safe_bWantsToWalk = Saved_bWantsToWalk;
+	Demo3MovementComponent->Safe_bWantsToWalk = Saved_bWantsToWalk;
 	Demo3MovementComponent->Safe_bWantsToSprint = Saved_bWantsToSprint;
 	Demo3MovementComponent->Safe_bWantsToDash = Saved_bWantsToDash;
 }
@@ -106,7 +106,7 @@ void UDemo3MovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 {
 	Super::UpdateFromCompressedFlags(Flags);
 
-	//Safe_bWantsToWalk = (Flags & FSavedMove_Demo3::FLAG_Walk)		!= 0;
+	Safe_bWantsToWalk = (Flags & FSavedMove_Demo3::FLAG_Walk)		!= 0;
 	Safe_bWantsToSprint = (Flags & FSavedMove_Demo3::FLAG_Sprint)	!= 0;
 	Safe_bWantsToDash = (Flags & FSavedMove_Demo3::FLAG_Dash)		!= 0;
 }
@@ -144,6 +144,8 @@ float UDemo3MovementComponent::GetMaxSpeed() const
 	{
 	case CMOVE_Sprint:
 		return Sprint_MaxSpeed;
+	case CMOVE_Walk:
+		return Walk_MaxSpeed;
 		
 	default:
 		UE_LOG(LogTemp, Fatal, TEXT("Invalid Movement Mode"))
@@ -167,7 +169,7 @@ void UDemo3MovementComponent::OnMovementUpdated(float DeltaSeconds, const FVecto
 {
 	Super::OnMovementUpdated(DeltaSeconds, OldLocation, OldVelocity);
 
-	if (MovementMode == MOVE_Walking)
+	if (IsCustomMovementMode(CMOVE_Sprint))
 	{
 		if (Safe_bWantsToSprint)
 		{
@@ -182,7 +184,14 @@ void UDemo3MovementComponent::OnMovementUpdated(float DeltaSeconds, const FVecto
 			MaxWalkSpeed = Base_MaxWalkSpeed;
 		}
 	}
-	
+	/*if (IsMovementMode(MOVE_Flying) && !HasRootMotionSources())
+	{
+		SetMovementMode(MOVE_Walking);
+	}*/
+	if(!CharacterOwner->IsPlayingRootMotion())
+	{
+		bIsDashing = false;
+	}
 	
 }
 void UDemo3MovementComponent::PhysCustom(float deltaTime, int32 Iterations)
@@ -195,7 +204,15 @@ void UDemo3MovementComponent::PhysCustom(float deltaTime, int32 Iterations)
 void UDemo3MovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
 {
 	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
-	
+
+	if (IsMovingOnGround())
+	{
+		DashCurrentCount = DashMaxCount;
+		if (DashCurrentCount > DashMaxCount)
+		{
+			DashCurrentCount = 0;
+		}
+	}
 }
 
 #pragma endregion 
@@ -218,7 +235,7 @@ void UDemo3MovementComponent::SprintReleased()
 	Safe_bWantsToSprint = false;
 }
 
-void UDemo3MovementComponent::CrouchPressed()
+void UDemo3MovementComponent::CrouchToggle()
 {
 	bWantsToCrouch = !bWantsToCrouch;
 }
@@ -237,12 +254,10 @@ void UDemo3MovementComponent::DashPressed()
 		UE_LOG(LogClass, Warning, TEXT("Timer is Set!"));
 	}
 }
-
 void UDemo3MovementComponent::DashReleased()
 {
 	GetWorld()->GetTimerManager().ClearTimer(TimerHandle_DashCooldown);
 	Safe_bWantsToDash = false;
-	
 }
 
 #pragma endregion
@@ -265,30 +280,39 @@ void UDemo3MovementComponent::DashReleased()
 void UDemo3MovementComponent::OnDashCooldown()
 {
 	Safe_bWantsToDash = true;
+	
+}
+bool UDemo3MovementComponent::IsDashing() const
+{
+	return bIsDashing;
 }
 
 bool UDemo3MovementComponent::CanDash() const
 {
-	return IsWalking() && !IsCrouching();
+	return DashCurrentCount && (IsWalking() && !IsCrouching() || IsFalling());
 }
 void UDemo3MovementComponent::PerformDash()
 {
-	UE_LOG(LogClass, Warning, TEXT("PerformDash Start!"));
+	bIsDashing = true;
+	DashCurrentCount--;
+	
 	DashStartTime = GetWorld()->GetTimeSeconds();
 	
-	
-	FVector DashDirection = (Acceleration.IsNearlyZero() ? UpdatedComponent->GetForwardVector() : Acceleration).GetSafeNormal2D();
-	Velocity = DashImpulse * (DashDirection + FVector::UpVector * .1f);
+	//Phys implemintation for non-rootmotion only.
+	/*FVector DashDirection = (Acceleration.IsNearlyZero() ? UpdatedComponent->GetForwardVector() : Acceleration).GetSafeNormal2D();
+	Velocity += DashImpulse * (DashDirection + FVector::UpVector * .1f);
 
 	FQuat NewRotation = FRotationMatrix::MakeFromXZ(DashDirection, FVector::UpVector).ToQuat();
 	FHitResult Hit;
-	SafeMoveUpdatedComponent(FVector::ZeroVector, NewRotation, false, Hit);
+	SafeMoveUpdatedComponent(FVector::ZeroVector, NewRotation, false, Hit);*/
 
+	// -------------------------------------------------
+	
 	SetMovementMode(MOVE_Falling);
 	
-	UE_LOG(LogClass, Display, TEXT("PerformDash End!"));
-	DashStartDelegate.Broadcast();
+	CharacterOwner->PlayAnimMontage(DashMontage);
 	
+	UE_LOG(LogClass, Warning, TEXT("PerformDash!"));
 }
 
 #pragma endregion 

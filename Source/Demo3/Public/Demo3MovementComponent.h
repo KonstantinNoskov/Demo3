@@ -1,11 +1,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Demo3Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Demo3MovementComponent.generated.h"
-
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FDashStartDelegate);
-
 
 UENUM(BlueprintType)
 enum ECustomMovementMode
@@ -32,7 +30,7 @@ protected:
 	virtual void InitializeComponent() override;
 
 	// Walk
-	UPROPERTY(EditDefaultsOnly, Category=Sprint) float Walk_MaxSpeed = 200.f;
+	UPROPERTY(EditDefaultsOnly, Category=Walk) float Walk_MaxSpeed = 200.f;
 	float BaseSpeed = GetMaxSpeed();
 	
 	// Sprint
@@ -41,25 +39,26 @@ protected:
 
 	// Dash
 	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashImpulse = 1000.f;
+	UPROPERTY(EditDefaultsOnly, Category=Dash) UAnimMontage* DashMontage;
 	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashCooldownDuration = 1.f;
+	UPROPERTY(EditDefaultsOnly, Category=Dash) uint8 DashMaxCount = 1.f;
+	uint8 DashCurrentCount = DashMaxCount;
 	
 	// Safe Variables
 	bool Safe_bWantsToSprint;
 	bool Safe_bWantsToWalk;
-	bool Safe_bWantsToDash;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly,  Category=Dash) bool Safe_bWantsToDash;
+	
 
 	// Working Variables
 	float DashStartTime;
+	bool bIsDashing;
 	
 	// Transient
 	UPROPERTY(Transient) ADemo3Character* Demo3CharacterOwner;
-
-	// Delegates
-	FDashStartDelegate DashStartDelegate;
-
+	
 	// Timers
-	FTimerHandle TimerHandle_DashCooldown;
-
+	UPROPERTY(BlueprintReadOnly)FTimerHandle TimerHandle_DashCooldown;
 
 #pragma endregion
 	
@@ -119,10 +118,8 @@ protected:
 	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;
 	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
 	
-
 	bool IsMovementMode(EMovementMode InMovementMode) const;
 	UFUNCTION(BlueprintPure)bool IsCustomMovementMode(ECustomMovementMode InCustomMovementMode) const;
-
 
 #pragma endregion
 
@@ -135,7 +132,7 @@ public:
 	UFUNCTION(BlueprintCallable) void SprintPressed();
 	UFUNCTION(BlueprintCallable) void SprintReleased();
 
-	UFUNCTION(BlueprintCallable) void CrouchPressed();
+	UFUNCTION(BlueprintCallable) void CrouchToggle();
 
 	UFUNCTION(BlueprintCallable) void DashPressed();
 	UFUNCTION(BlueprintCallable) void DashReleased();
@@ -156,8 +153,12 @@ public:
 // Dash
 #pragma region Dash
 	
+public:
+	UFUNCTION(BlueprintPure) bool IsDashing() const;
+	
 private:
 	void OnDashCooldown();
+	
 	bool CanDash() const;
 	void PerformDash();
 

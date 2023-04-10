@@ -72,11 +72,11 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	PlayerInputComponent->BindAction("Walk", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::WalkToggle);
-
+	
 	PlayerInputComponent->BindAction("Sprint", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::SprintPressed);
 	PlayerInputComponent->BindAction("Sprint", IE_Released, Demo3MovementComponent, &UDemo3MovementComponent::SprintReleased);
 
-	PlayerInputComponent->BindAction("Crouch", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::CrouchPressed);
+	PlayerInputComponent->BindAction("Crouch", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::CrouchToggle);
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::DashPressed);
 	PlayerInputComponent->BindAction("Dash", IE_Released, Demo3MovementComponent, &UDemo3MovementComponent::DashReleased);
