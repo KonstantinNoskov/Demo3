@@ -21,7 +21,9 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UDemo3MovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	Demo3MovementComponent = Cast<UDemo3MovementComponent>(GetCharacterMovement());
-		
+	Demo3MovementComponent->SetIsReplicated(true);
+
+	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
@@ -33,6 +35,7 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
+	
 
 	// Configure character movement
 	Demo3MovementComponent->bOrientRotationToMovement = true; // Character moves in the direction of input...	
@@ -80,9 +83,13 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::DashPressed);
 	PlayerInputComponent->BindAction("Dash", IE_Released, Demo3MovementComponent, &UDemo3MovementComponent::DashReleased);
+
+	PlayerInputComponent->BindAction("Slide", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::SlidePressed);
+	PlayerInputComponent->BindAction("Slide", IE_Released, Demo3MovementComponent, &UDemo3MovementComponent::SlideReleased);
 	
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADemo3Character::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADemo3Character::MoveRight);
+	
 
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
@@ -97,23 +104,52 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	PlayerInputComponent->BindTouch(IE_Released, this, &ADemo3Character::TouchStopped);
 }
 
+/*void ADemo3Character::Jump()
+{
+	Super::Jump();
+
+	bPressedDemo3Jump = true;
+	bPressedJump = false;
+}
+
+void ADemo3Character::StopJumping()
+{
+	Super::StopJumping();
+
+	bPressedDemo3Jump = false;
+}*/
+
+FCollisionQueryParams ADemo3Character::GetIgnoreCharacterParams() const
+{
+	FCollisionQueryParams Params;
+
+	TArray<AActor*> CharacterChildren;
+	GetAllChildActors(CharacterChildren);
+	Params.AddIgnoredActors(CharacterChildren);
+	Params.AddIgnoredActor(this);
+
+	return Params;
+}
+
 #pragma endregion
 
 // Jump 
 #pragma region Jump
+
 void ADemo3Character::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
-		Jump();
+	Jump();
 }
-
 void ADemo3Character::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
-		StopJumping();
+	StopJumping();
 }
+
 #pragma endregion
 
 // Look
 #pragma region Look
+
 void ADemo3Character::TurnAtRate(float Rate)
 {
 	// calculate delta for this frame from the rate information
@@ -129,6 +165,7 @@ void ADemo3Character::LookUpAtRate(float Rate)
 
 // Move
 #pragma region Move
+
 void ADemo3Character::MoveForward(float Value)
 {
 	if ((Controller != nullptr) && (Value != 0.0f))
@@ -140,9 +177,10 @@ void ADemo3Character::MoveForward(float Value)
 		// get forward vector
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		AddMovementInput(Direction, Value);
+
+		
 	}
 }
-
 void ADemo3Character::MoveRight(float Value)
 {
 	if ( (Controller != nullptr) && (Value != 0.0f) )
@@ -157,6 +195,7 @@ void ADemo3Character::MoveRight(float Value)
 		AddMovementInput(Direction, Value);
 	}
 }
+
 #pragma endregion
 
 #pragma endregion 

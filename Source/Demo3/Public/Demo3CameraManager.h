@@ -12,9 +12,11 @@ UCLASS()
 class DEMO3_API ADemo3CameraManager : public APlayerCameraManager
 {
 	GENERATED_BODY()
-
+	
 public:
 	ADemo3CameraManager();
+
+	void Zoom();
 	
 	UPROPERTY(EditDefaultsOnly) float CrouchBlendDuration;
 	float CrouchBlendTime;
