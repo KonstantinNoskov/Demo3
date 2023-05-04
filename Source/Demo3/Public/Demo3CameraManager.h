@@ -15,12 +15,11 @@ class DEMO3_API ADemo3CameraManager : public APlayerCameraManager
 	
 public:
 	ADemo3CameraManager();
-
-	void Zoom();
 	
-	UPROPERTY(EditDefaultsOnly) float CrouchBlendDuration;
+	// Camera Сrouch
+	UPROPERTY(EditDefaultsOnly) float CrouchBlendDuration = .3f;
 	float CrouchBlendTime;
-
+	
 	virtual void UpdateViewTarget(FTViewTarget& OutVT, float DeltaTime) override;
 	
 };

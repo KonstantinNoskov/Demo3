@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Demo3Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Demo3MovementComponent.generated.h"
 
@@ -19,7 +18,7 @@ enum ECustomMovementMode
 };
 
 class ADemo3Character;
-
+ 
 UCLASS()
 class DEMO3_API UDemo3MovementComponent : public UCharacterMovementComponent
 {
@@ -43,34 +42,50 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashCooldownDuration = 1.f;
 	UPROPERTY(EditDefaultsOnly, Category=Dash) float AuthDashCooldownDuration=.9f;
 	UPROPERTY(EditDefaultsOnly, Category=Dash) UAnimMontage* DashMontage;
-	UPROPERTY(EditDefaultsOnly, Category=Dash) uint8 DashMaxCount = 1.f;
+	UPROPERTY(EditDefaultsOnly, Category=Dash) uint8 DashMaxCount = 1;
 
 	uint8 DashCurrentCount = DashMaxCount;
 	float DashStartTime;
-	float SlideEndTime;
 	bool bIsDashing;
 	
 	// Slide
 	UPROPERTY(EditDefaultsOnly, Category=Slide) float SlideImpulse = 500.f;
 	UPROPERTY(EditDefaultsOnly, Category=Slide) float SlideMinSpeed = 300.f;
+	UPROPERTY(EditDefaultsOnly, Category=Slide) float SlideMaxSpeed = 900.f;
 	UPROPERTY(EditDefaultsOnly, Category=Slide) float SlideGravityForce = 4000.f;
 	UPROPERTY(EditDefaultsOnly, Category=Slide) float SlideFriction = 1.3f;
 	UPROPERTY(EditDefaultsOnly, Category=Slide) float SlideCooldownDuration = 1.f;
+	UPROPERTY(EditDefaultsOnly, Category=Slide) float SlideMinSurfaceAngle = 0.9f;
+	UPROPERTY(EditDefaultsOnly, Category=Slide) float SlideSlopeAngle = 90;
 
+	float SlideEndTime;
+	float CurrentSurfaceAngle;
+	bool bUpSlope;
+	
 	// Mantle
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) float MantleMaxDistance = 200;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) float MantleReachHeight = 50;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) float MinMantleDepth = 30;
-	UPROPERTY(EditDefaultsOnly, Category=Mantle) float MantleMinWallSteepnessAngle = 75;
-	UPROPERTY(EditDefaultsOnly, Category=Mantle) float MantleMaxSurfaceAngle = 40;
+	UPROPERTY(EditDefaultsOnly, Category=Mantle) float MantleMinWallSteepnessAngle = 45;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) float MantleMaxAlignmentAngle = 45;
-
+	UPROPERTY(EditDefaultsOnly, Category=Mantle) float MantleMaxSurfaceAngle = 45;
+	
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* TallMantleMontage;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* TransitionTallMantleMontage;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* ProxyTallMantleMontage;
+	
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* ShortMantleMontage;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* TransitionShortMantleMontage;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* ProxyShortMantleMontage;
+	bool bTallMantle;
+
+	
+	bool Safe_bTransitionFinished;
+	TSharedPtr<FRootMotionSource_MoveToForce> TransitionRMS;
+	UPROPERTY(Transient) UAnimMontage* TransitionQueuedMontage;
+	
+	float TransitionQueuedMontageSpeed;
+	int TransitionRMS_ID;
 	
 	// Safe Flags
 	bool Safe_bWantsToSprint;
@@ -84,16 +99,10 @@ protected:
 	FTimerHandle TimerHandle_SlideCooldown;
 	FTimerHandle TimerHandle_DashCooldown;
 	
-	bool Safe_bTransitionFinished;
-	TSharedPtr<FRootMotionSource_MoveToForce> TransitionRMS;
-	UPROPERTY(Transient) UAnimMontage* TransitionQueuedMontage;
-	float TransitionQueuedMontageSpeed;
-	int TransitionRMS_ID;
-
 	// Replication
 	UPROPERTY(ReplicatedUsing=OnRep_DashStart) bool Proxy_bDashStart;
-	//UPROPERTY(ReplicatedUsing=OnRep_ShortMantle) bool Proxy_bShortMantle;
-	//UPROPERTY(ReplicatedUsing=OnRep_TallMantle) bool Proxy_bTallMantle;
+	UPROPERTY(ReplicatedUsing=OnRep_ShortMantle) bool Proxy_bShortMantle;
+	UPROPERTY(ReplicatedUsing=OnRep_TallMantle) bool Proxy_bTallMantle;
 
 	// Delegates;
 	FDashStartDelegate DashStartDelegate;
@@ -126,10 +135,8 @@ protected:
 		uint8 Saved_bWantsToDash:1;
 		uint8 Saved_bPressedDemo3Jump:1;
 		
-		
 		uint8 Saved_bHadAnimRootMotion:1;
 		uint8 Saved_bTransitionFinished:1;
-		
 		
 		virtual bool CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* InCharacter, float MaxDelta) const override;
 		virtual void Clear() override;
@@ -165,6 +172,7 @@ protected:
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 	
 	virtual void UpdateCharacterStateBeforeMovement(float DeltaSeconds) override;
+	virtual void UpdateCharacterStateAfterMovement(float DeltaSeconds) override;
 	
 	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
 	
@@ -175,6 +183,7 @@ private:
 	bool IsServer() const;
 	float CapR() const;
 	float CapHH() const;
+	UCapsuleComponent* Cap() const;
 
 #pragma endregion
 	
@@ -208,16 +217,21 @@ public:
 private:
 	void ExitSlide();
 	void PhysSlide(float deltaTime, int32 Iterations);
-	bool GetSlideSurface(FHitResult& Hit) const;
-	void OnSlideCooldown();
+	bool GetSlideSurface(FHitResult& Hit);
+	
 
 #pragma endregion
 
 // Mantle
 #pragma region Mantle
+public:
+	UFUNCTION(BlueprintPure) bool GetMantle() const;
+	
+private:
+	bool TryMantle() ; 
+	FVector GetMantleStartLocation(FHitResult FrontHit, FHitResult SurfaceHit, bool TallMantle) const;
 
-bool TryMantle();
-FVector GetMantleStartLocation(FHitResult FrontHit, FHitResult SurfaceHit, bool bTallMantle) const;
+public:
 
 #pragma endregion 
 
@@ -246,8 +260,8 @@ public:
 	
 private:
 	UFUNCTION() void OnRep_DashStart();
-	//UFUNCTION() void OnRep_ShortMantle();
-	//UFUNCTION() void OnRep_TallMantle();
+	UFUNCTION() void OnRep_ShortMantle();
+	UFUNCTION() void OnRep_TallMantle();
 	 
 };
 

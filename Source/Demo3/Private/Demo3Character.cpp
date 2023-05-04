@@ -9,11 +9,6 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 
-
-//////////////////////////////////////////////////////////////////////////
-// ADemo3Character
-
-
 // Constructor
 #pragma region Consctructor
 
@@ -22,13 +17,12 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 {
 	Demo3MovementComponent = Cast<UDemo3MovementComponent>(GetCharacterMovement());
 	Demo3MovementComponent->SetIsReplicated(true);
-
 	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
 	// set our turn rates for input
-	BaseTurnRate = 45.f;
+	BaseTurnRate = 90.f;
 	BaseLookUpRate = 45.f;
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
@@ -36,7 +30,6 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 	
-
 	// Configure character movement
 	Demo3MovementComponent->bOrientRotationToMovement = true; // Character moves in the direction of input...	
 	Demo3MovementComponent->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
@@ -53,9 +46,6 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
-
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 }
 
 #pragma endregion 
@@ -63,10 +53,19 @@ ADemo3Character::ADemo3Character(const FObjectInitializer& ObjectInitializer)
 void ADemo3Character::BeginPlay()
 {
 	Super::BeginPlay();
+	
+}
+void ADemo3Character::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// Делает отдаление камеры более гладким при зуме
+	GetCameraBoom()->TargetArmLength = FMath::FInterpTo(GetCameraBoom()->TargetArmLength, ScrollArmLength, DeltaTime, CameraZoomSpeed);	
+	
 }
 
 // Input
-#pragma  region  Input
+#pragma region Input
 void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
@@ -87,10 +86,11 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	PlayerInputComponent->BindAction("Slide", IE_Pressed, Demo3MovementComponent, &UDemo3MovementComponent::SlidePressed);
 	PlayerInputComponent->BindAction("Slide", IE_Released, Demo3MovementComponent, &UDemo3MovementComponent::SlideReleased);
 	
+	PlayerInputComponent->BindAxis("Zoom", this, &ADemo3Character::CameraZoom);
+	
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADemo3Character::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADemo3Character::MoveRight);
 	
-
 	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
 	// "turn" handles devices that provide an absolute delta, such as a mouse.
 	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
@@ -104,37 +104,24 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 	PlayerInputComponent->BindTouch(IE_Released, this, &ADemo3Character::TouchStopped);
 }
 
-/*void ADemo3Character::Jump()
+#pragma endregion
+
+// Jump 
+#pragma region Jump
+
+void ADemo3Character::Jump()
 {
 	Super::Jump();
 
 	bPressedDemo3Jump = true;
 	bPressedJump = false;
 }
-
 void ADemo3Character::StopJumping()
 {
 	Super::StopJumping();
 
 	bPressedDemo3Jump = false;
-}*/
-
-FCollisionQueryParams ADemo3Character::GetIgnoreCharacterParams() const
-{
-	FCollisionQueryParams Params;
-
-	TArray<AActor*> CharacterChildren;
-	GetAllChildActors(CharacterChildren);
-	Params.AddIgnoredActors(CharacterChildren);
-	Params.AddIgnoredActor(this);
-
-	return Params;
 }
-
-#pragma endregion
-
-// Jump 
-#pragma region Jump
 
 void ADemo3Character::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
@@ -146,6 +133,20 @@ void ADemo3Character::TouchStopped(ETouchIndex::Type FingerIndex, FVector Locati
 }
 
 #pragma endregion
+
+// Zoom 
+#pragma region Zoom
+
+void ADemo3Character::CameraZoom(float value)
+{
+	if (value != 0)
+	{
+		ScrollArmLength = FMath::Clamp(value * ZoomStep * -1 + GetCameraBoom()->TargetArmLength, MinZoomDistance, MaxZoomDistance);	
+	}
+	
+}
+
+#pragma endregion 
 
 // Look
 #pragma region Look
@@ -197,5 +198,17 @@ void ADemo3Character::MoveRight(float Value)
 }
 
 #pragma endregion
+
+FCollisionQueryParams ADemo3Character::GetIgnoreCharacterParams() const
+{
+	FCollisionQueryParams Params;
+
+	TArray<AActor*> CharacterChildren;
+	GetAllChildActors(CharacterChildren);
+	Params.AddIgnoredActors(CharacterChildren);
+	Params.AddIgnoredActor(this);
+
+	return Params;
+}
 
 #pragma endregion 
