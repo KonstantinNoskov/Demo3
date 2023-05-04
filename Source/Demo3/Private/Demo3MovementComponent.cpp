@@ -40,93 +40,6 @@ void UDemo3MovementComponent::InitializeComponent()
 	
 };
 
-// Client/Server setups
-#pragma region Client/Server
-
-bool UDemo3MovementComponent::FSavedMove_Demo3::CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* InCharacter, float MaxDelta) const
-{
-	FSavedMove_Demo3* NewDemo3Move = static_cast<FSavedMove_Demo3*>(NewMove.Get());
-
-	if (Saved_bWantsToWalk != NewDemo3Move->Saved_bWantsToWalk)		return false;
-	if (Saved_bWantsToSprint != NewDemo3Move->Saved_bWantsToSprint) return false;
-	if (Saved_bWantsToDash != NewDemo3Move->Saved_bWantsToDash)		return false;
-	
-	return FSavedMove_Character::CanCombineWith(NewMove, InCharacter, MaxDelta);
-}
-void UDemo3MovementComponent::FSavedMove_Demo3::Clear()
-{
-	FSavedMove_Character::Clear();
-
-	Saved_bWantsToWalk		 = 0;
-	Saved_bWantsToSprint	 = 0;
-	Saved_bWantsToDash		 = 0;
-	//Saved_bPrevWantsToCrouch = 0;
-}
-uint8 UDemo3MovementComponent::FSavedMove_Demo3::GetCompressedFlags() const
-{
-	uint8 Result = Super::GetCompressedFlags();
-
-	if (Saved_bWantsToWalk )		Result	|= FLAG_Walk;
-	if (Saved_bWantsToSprint)		Result	|= FLAG_Sprint;
-	if (Saved_bWantsToDash )		Result	|= FLAG_Dash;
-	if (Saved_bPressedDemo3Jump )	Result	|= FLAG_JumpPressed;
-	
-	return Result;
-}
-void UDemo3MovementComponent::FSavedMove_Demo3::SetMoveFor(ACharacter* C, float InDeltaTime, FVector const& NewAccel, FNetworkPredictionData_Client_Character& ClientData)
-{
-	FSavedMove_Character::SetMoveFor(C, InDeltaTime, NewAccel, ClientData);
-
-	UDemo3MovementComponent* Demo3MovementComponent = Cast<UDemo3MovementComponent>(C->GetCharacterMovement());
-
-	Saved_bWantsToWalk = Demo3MovementComponent->Safe_bWantsToWalk;
-	Saved_bWantsToSprint = Demo3MovementComponent->Safe_bWantsToSprint;
-	Saved_bWantsToDash = Demo3MovementComponent->Safe_bWantsToDash;
-
-	Saved_bPressedDemo3Jump = Demo3MovementComponent->Demo3CharacterOwner->bPressedDemo3Jump;
-	Saved_bHadAnimRootMotion = Demo3MovementComponent->Safe_bHadAnimRootMotion;
-	Saved_bTransitionFinished = Demo3MovementComponent->Safe_bTransitionFinished;
-	
-}
-void UDemo3MovementComponent::FSavedMove_Demo3::PrepMoveFor(ACharacter* C)
-{
-	FSavedMove_Character::PrepMoveFor(C);
-
-	UDemo3MovementComponent* Demo3MovementComponent = Cast<UDemo3MovementComponent>(C->GetCharacterMovement());
-
-	Demo3MovementComponent->Safe_bWantsToWalk = Saved_bWantsToWalk;
-	Demo3MovementComponent->Safe_bWantsToSprint = Saved_bWantsToSprint;
-	Demo3MovementComponent->Safe_bWantsToDash = Saved_bWantsToDash;
-
-	Demo3MovementComponent->Demo3CharacterOwner->bPressedDemo3Jump = Saved_bPressedDemo3Jump;
-	Demo3MovementComponent->Safe_bHadAnimRootMotion = Saved_bHadAnimRootMotion;
-	Demo3MovementComponent->Safe_bTransitionFinished = Saved_bTransitionFinished; 
-	
-}
-UDemo3MovementComponent::FNetworkPredictionData_Client_Demo3::FNetworkPredictionData_Client_Demo3(const UCharacterMovementComponent& ClientMovement): Super(ClientMovement)
-{
-}
-FSavedMovePtr UDemo3MovementComponent::FNetworkPredictionData_Client_Demo3::AllocateNewMove()
-{
-	return FSavedMovePtr(new FSavedMove_Demo3());
-}
-FNetworkPredictionData_Client* UDemo3MovementComponent::GetPredictionData_Client() const
-{
-	check(PawnOwner != nullptr)
-
-	if (ClientPredictionData == nullptr)
-	{
-		UDemo3MovementComponent* MutableThis = const_cast<UDemo3MovementComponent*>(this);
-
-		MutableThis->ClientPredictionData = new FNetworkPredictionData_Client_Demo3(*this);
-		MutableThis->ClientPredictionData->MaxSmoothNetUpdateDist = 92.f;
-		MutableThis->ClientPredictionData->NoSmoothNetUpdateDist = 140.f;
-	}
-	return ClientPredictionData;
-}
-
-#pragma endregion
-
 // Movement PipeLine
 #pragma region Movement PipeLine
 
@@ -183,16 +96,6 @@ float UDemo3MovementComponent::CapHH() const
 	return CharacterOwner->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
 }
 
-// Переворачиваем флаги наших кастомных MovementMode
-void UDemo3MovementComponent::UpdateFromCompressedFlags(uint8 Flags)
-{
-	Super::UpdateFromCompressedFlags(Flags);
-
-	Safe_bWantsToWalk	= (Flags & FSavedMove_Demo3::FLAG_Walk)		!= 0;
-	Safe_bWantsToSprint = (Flags & FSavedMove_Demo3::FLAG_Sprint)	!= 0;
-	Safe_bWantsToDash	= (Flags & FSavedMove_Demo3::FLAG_Dash)		!= 0;
-}
-
 // Блок срабатывает каждый фрейм перед обновлением физики
 void UDemo3MovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
 {
@@ -224,13 +127,8 @@ void UDemo3MovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeco
 			PerformDash();
 			Safe_bWantsToDash = false;
 			bIsDashing = true;
-			Proxy_bDashStart = true;
+			
 		}
-	}
-	else
-	{
-		Proxy_bDashStart = false;
-		
 	}
 
 	// Try Mantle
@@ -715,13 +613,11 @@ bool UDemo3MovementComponent::TryMantle()
 	{
 		TransitionQueuedMontage = TallMantleMontage;
 		CharacterOwner->PlayAnimMontage(TransitionTallMantleMontage, 1 / TransitionRMS->Duration);
-		if (IsServer()) Proxy_bTallMantle = !Proxy_bTallMantle;
 	}
 	else
 	{
 		TransitionQueuedMontage = ShortMantleMontage;
 		CharacterOwner->PlayAnimMontage(TransitionShortMantleMontage, 1 / TransitionRMS->Duration);
-		if (IsServer()) Proxy_bShortMantle = !Proxy_bShortMantle;
 	}
 	
 	return true;
@@ -801,36 +697,5 @@ void UDemo3MovementComponent::DashReleased()
 }
 
 #pragma endregion	
-
-// Replication
-#pragma region Replication
-
-void UDemo3MovementComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
-	DOREPLIFETIME_CONDITION(UDemo3MovementComponent, Proxy_bDashStart, COND_SkipOwner)
-
-	DOREPLIFETIME_CONDITION(UDemo3MovementComponent, Proxy_bShortMantle, COND_SkipOwner)
-	DOREPLIFETIME_CONDITION(UDemo3MovementComponent, Proxy_bTallMantle, COND_SkipOwner)
-}
-
-void UDemo3MovementComponent::OnRep_DashStart()
-{
-	if (Proxy_bDashStart) 
-	{
-		DashStartDelegate.ExecuteIfBound();
-		//CharacterOwner->PlayAnimMontage(DashMontage);
-	}
-}
-
-void UDemo3MovementComponent::OnRep_ShortMantle()
-{
-	CharacterOwner->PlayAnimMontage(ProxyShortMantleMontage);
-}
-void UDemo3MovementComponent::OnRep_TallMantle()
-{
-	CharacterOwner->PlayAnimMontage(ProxyTallMantleMontage);
-}
 
 #pragma endregion 

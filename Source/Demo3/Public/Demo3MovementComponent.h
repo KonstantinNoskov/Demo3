@@ -72,11 +72,9 @@ protected:
 	
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* TallMantleMontage;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* TransitionTallMantleMontage;
-	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* ProxyTallMantleMontage;
 	
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* ShortMantleMontage;
 	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* TransitionShortMantleMontage;
-	UPROPERTY(EditDefaultsOnly, Category=Mantle) UAnimMontage* ProxyShortMantleMontage;
 	bool bTallMantle;
 
 	
@@ -98,11 +96,6 @@ protected:
 	// Timers
 	FTimerHandle TimerHandle_SlideCooldown;
 	FTimerHandle TimerHandle_DashCooldown;
-	
-	// Replication
-	UPROPERTY(ReplicatedUsing=OnRep_DashStart) bool Proxy_bDashStart;
-	UPROPERTY(ReplicatedUsing=OnRep_ShortMantle) bool Proxy_bShortMantle;
-	UPROPERTY(ReplicatedUsing=OnRep_TallMantle) bool Proxy_bTallMantle;
 
 	// Delegates;
 	FDashStartDelegate DashStartDelegate;
@@ -112,54 +105,6 @@ protected:
 	
 #pragma endregion
 	
-	// Client/Server setups
-	#pragma region Client/Server
-	
-	class FSavedMove_Demo3 : public FSavedMove_Character
-	{
-	public:
-		enum CompressedFlags
-		{
-			FLAG_Walk		= 0x10,
-			FLAG_Sprint		= 0x20,
-			FLAG_Dash		= 0x40,
-			FLAG_Custom_3	= 0x80
-		};
-		
-		typedef FSavedMove_Character Super;
-	
-		// Server's Flags
-		uint8 Saved_bWantsToWalk:1;
-		uint8 Saved_bWantsToSprint:1;
-		uint8 Saved_bWantsToSlide:1;
-		uint8 Saved_bWantsToDash:1;
-		uint8 Saved_bPressedDemo3Jump:1;
-		
-		uint8 Saved_bHadAnimRootMotion:1;
-		uint8 Saved_bTransitionFinished:1;
-		
-		virtual bool CanCombineWith(const FSavedMovePtr& NewMove, ACharacter* InCharacter, float MaxDelta) const override;
-		virtual void Clear() override;
-		virtual uint8 GetCompressedFlags() const override;
-		virtual void SetMoveFor(ACharacter* C, float InDeltaTime, FVector const& NewAccel, FNetworkPredictionData_Client_Character& ClientData) override;
-		virtual void PrepMoveFor(ACharacter* C) override;
-	};
-
-	class FNetworkPredictionData_Client_Demo3 : public FNetworkPredictionData_Client_Character
-	{
-	public:
-		FNetworkPredictionData_Client_Demo3(const UCharacterMovementComponent& ClientMovement);
-
-		typedef FNetworkPredictionData_Client_Character Super;
-
-		virtual FSavedMovePtr AllocateNewMove() override;
-	};
-
-public:
-	virtual FNetworkPredictionData_Client* GetPredictionData_Client() const override;
-
-#pragma endregion 
-
 // Helping functions
 public:
 	virtual bool IsMovingOnGround() const override;
@@ -167,7 +112,6 @@ public:
 	virtual float GetMaxSpeed() const override;
 	
 protected:
-	virtual void UpdateFromCompressedFlags(uint8 Flags) override;
 	virtual void OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, const FVector& OldVelocity) override;
 	virtual void OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode) override;
 	
@@ -253,16 +197,7 @@ public:
 	UFUNCTION(BlueprintCallable) void DashReleased();
 
 #pragma endregion
-
-// Proxy Replication
-public:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-private:
-	UFUNCTION() void OnRep_DashStart();
-	UFUNCTION() void OnRep_ShortMantle();
-	UFUNCTION() void OnRep_TallMantle();
-	 
 };
 
 
