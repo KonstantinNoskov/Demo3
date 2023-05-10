@@ -1,7 +1,6 @@
 
 #include "Demo3MovementComponent.h"
 
-#include "ApexClothingUtils.h"
 #include "Demo3Character.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
@@ -95,7 +94,7 @@ void UDemo3MovementComponent::FSavedMove_Demo3::PrepMoveFor(ACharacter* C)
 	UDemo3MovementComponent* Demo3MovementComponent = Cast<UDemo3MovementComponent>(C->GetCharacterMovement());
 
 	Demo3MovementComponent->Safe_bWantsToWalk = Saved_bWantsToWalk;
-	Demo3MovementComponent->Safe_bWantsToSprint = Saved_bWantsToSprint;
+	Demo3MovementComponent->Safe_bWantsToSprint = Saved_bWantsToSprint; 
 	Demo3MovementComponent->Safe_bWantsToDash = Saved_bWantsToDash;
 
 	Demo3MovementComponent->Demo3CharacterOwner->bPressedDemo3Jump = Saved_bPressedDemo3Jump;
@@ -193,9 +192,10 @@ void UDemo3MovementComponent::UpdateFromCompressedFlags(uint8 Flags)
 	Safe_bWantsToDash	= (Flags & FSavedMove_Demo3::FLAG_Dash)		!= 0;
 }
 
-// Блок срабатывает каждый фрейм перед обновлением физики
+// Блок срабатывает каждый тик перед обновлением физики
 void UDemo3MovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeconds)
 {
+	
 	// Slide
 	if (MovementMode == MOVE_Walking )
 	{
@@ -230,7 +230,6 @@ void UDemo3MovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeco
 	else
 	{
 		Proxy_bDashStart = false;
-		
 	}
 
 	// Try Mantle
@@ -274,23 +273,23 @@ void UDemo3MovementComponent::UpdateCharacterStateBeforeMovement(float DeltaSeco
 	Super::UpdateCharacterStateBeforeMovement(DeltaSeconds);
 }
 
-// Блок срабатывает каждый фрейм. Используем для представления физики того или иного MovementMode
+// Блок срабатывает каждый тик. Используем для представления физики того или иного MovementMode
 void UDemo3MovementComponent::PhysCustom(float deltaTime, int32 Iterations)
 {
 	Super::PhysCustom(deltaTime, Iterations);
-
+	
 	switch (CustomMovementMode)
 	{
 	case CMOVE_Slide:
 		PhysSlide(deltaTime,Iterations);
-		Acceleration = FVector::ZeroVector; // <-- Костыль устраняет глич анимации при ускорении в разных направлениях во время слайда 
+		Acceleration = FVector::ZeroVector; // <-- Костыль устраняет глич анимации при ускорении в разных направлениях во время слайда
 		break;
 	default:
 		UE_LOG(LogClass, Display, TEXT("ok"));		
 	}
 } 
 
-// Блок срабатывает каждый фрейм после обновления движения
+// Блок срабатывает каждый тик после обновления движения
 void UDemo3MovementComponent::UpdateCharacterStateAfterMovement(float DeltaSeconds)
 {
 	Super::UpdateCharacterStateAfterMovement(DeltaSeconds);
@@ -298,7 +297,7 @@ void UDemo3MovementComponent::UpdateCharacterStateAfterMovement(float DeltaSecon
 	if (!HasAnimRootMotion() && Safe_bHadAnimRootMotion && IsMovementMode(MOVE_Flying))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Ending Anim Root Motion"))
-		SetMovementMode(MOVE_Walking);
+		SetMovementMode(MOVE_Falling);
 		bTallMantle = false;
 	}
 
@@ -311,7 +310,7 @@ void UDemo3MovementComponent::UpdateCharacterStateAfterMovement(float DeltaSecon
 	Safe_bHadAnimRootMotion = HasAnimRootMotion();
 }
 
-// Блок срабатывает каждый фрейм после смены MovementMode
+// Блок срабатывает каждый тик при движении
 void UDemo3MovementComponent::OnMovementUpdated(float DeltaSeconds, const FVector& OldLocation, 
 	const FVector& OldVelocity)
 {
@@ -389,12 +388,12 @@ bool UDemo3MovementComponent::IsDashing() const
 
 bool UDemo3MovementComponent::CanDash() const
 {
-	return DashCurrentCount && ((IsWalking() && !IsCrouching()) || IsFalling());
+	return DashCurrentCount && ((IsWalking() && !IsCrouching()));
 }
 void UDemo3MovementComponent::PerformDash()
 {
 	//bIsDashing = true;
-	DashCurrentCount--;
+	//DashCurrentCount--;
 	
 	DashStartTime = GetWorld()->GetTimeSeconds();
 	
@@ -406,7 +405,7 @@ void UDemo3MovementComponent::PerformDash()
 	FHitResult Hit;
 	SafeMoveUpdatedComponent(FVector::ZeroVector, NewRotation, false, Hit);*/
 	
-	SetMovementMode(MOVE_Flying);
+	//SetMovementMode(MOVE_Falling);
 	CharacterOwner->PlayAnimMontage(DashMontage);
 	
 	UE_LOG(LogClass, Warning, TEXT("PerformDash!"));
@@ -423,12 +422,10 @@ bool UDemo3MovementComponent::GetSlideSurface(FHitResult& Hit)
 	FVector LineTraceEnd = LineTraceStart + CapHH() * 2.3f * FVector::DownVector;
 	FName ProfileName = TEXT("BlockAll");
 	
-	// LINE(LineTraceStart, LineTraceEnd, Red) 
+	LINE(LineTraceStart, LineTraceEnd, Red) 
 	
 	return GetWorld()->LineTraceSingleByProfile(Hit, LineTraceStart, LineTraceEnd, ProfileName, Demo3CharacterOwner->GetIgnoreCharacterParams());
 }
-
-
 
 void UDemo3MovementComponent::PhysSlide(float deltaTime, int32 Iterations)
 {
@@ -505,17 +502,17 @@ void UDemo3MovementComponent::EnterSlide()
 	// Проверка, чтобы не делать слайд вверх по лестнице
 	FHitResult FootHit;
 	
-	FVector FootHitStart = UpdatedComponent->GetComponentLocation() + FVector::DownVector * CapHH() + 10;
-	FVector FootHitEnd = FootHitStart + Velocity;
+	FVector FootHitStart = UpdatedComponent->GetComponentLocation() + FVector::DownVector * (CapHH() - 10.f);
+	FVector FootHitEnd = FootHitStart + UpdatedComponent->GetForwardVector() * CapR() * 2;
 	FName ProfileName = TEXT("BlockAll");
-	bool bOnStairs = (FootHit.Normal | FootHitEnd.GetSafeNormal2D()) > -.1f ? false : true;
 	
 	GetWorld()->LineTraceSingleByProfile(FootHit, FootHitStart, FootHitEnd, ProfileName, Demo3CharacterOwner->GetIgnoreCharacterParams());
+	bool bOnStairs = (FootHit.Normal | FootHitEnd.GetSafeNormal2D()) >= 0 ? false : true;
 	
 	// Debug Trace & Log
-	/*LINE(Start, End, Orange); 
-	FLOG(FootHit.Normal | End.GetSafeNormal2D(), Green);*/
-
+	LINE(FootHitStart, FootHitEnd, Orange)
+	FLOG(FootHit.Normal | FootHitEnd.GetSafeNormal2D(), Green)
+	
 	// Если все условия выполнены, входим в слайд
 	if (IsMovingOnGround() && Safe_bWantsToSprint && !bWantsToCrouch && CurrentTime - SlideEndTime >= SlideCooldownDuration && Safe_bWantsToSlide
 		&& !bUpSlope && !bOnStairs)
@@ -819,8 +816,8 @@ void UDemo3MovementComponent::OnRep_DashStart()
 {
 	if (Proxy_bDashStart) 
 	{
-		DashStartDelegate.ExecuteIfBound();
-		//CharacterOwner->PlayAnimMontage(DashMontage);
+		//DashStartDelegate.ExecuteIfBound();
+		CharacterOwner->PlayAnimMontage(DashMontage);
 	}
 }
 

@@ -112,7 +112,7 @@ void ADemo3Character::SetupPlayerInputComponent(class UInputComponent* PlayerInp
 void ADemo3Character::Jump()
 {
 	Super::Jump();
-
+	
 	bPressedDemo3Jump = true;
 	bPressedJump = false;
 }
@@ -178,8 +178,6 @@ void ADemo3Character::MoveForward(float Value)
 		// get forward vector
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		AddMovementInput(Direction, Value);
-
-		
 	}
 }
 void ADemo3Character::MoveRight(float Value)

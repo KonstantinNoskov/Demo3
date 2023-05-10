@@ -65,8 +65,8 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 public:
-	//virtual void Jump() override;
-	//virtual void StopJumping() override;
+	virtual void Jump() override;
+	virtual void StopJumping() override;
 
 public:
 	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; } 

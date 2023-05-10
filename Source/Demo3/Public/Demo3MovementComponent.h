@@ -36,7 +36,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category=Sprint) float Sprint_MaxSpeed = 750.f;
 
 	float BaseSpeed = MaxWalkSpeed;
-
+	
 	// Dash
 	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashImpulse = 1000.f;
 	UPROPERTY(EditDefaultsOnly, Category=Dash) float DashCooldownDuration = 1.f;
@@ -187,11 +187,20 @@ private:
 
 #pragma endregion
 	
-// Sprint
+// Walk / Sprint
+
+public:
 #pragma region Sprint
+	UFUNCTION(BlueprintPure) float GetWalkSpeed() const {return Walk_MaxSpeed;}
+	UFUNCTION(BlueprintPure) float GetSprintSpeed() const {return Sprint_MaxSpeed;}
 
 #pragma endregion
 
+// Jump
+#pragma  region Jump
+
+#pragma endregion 
+	
 // Crouch
 #pragma region Crouch
 	
@@ -203,6 +212,8 @@ private:
 
 private:
 	UFUNCTION(BlueprintPure) bool IsDashing() const;
+	UFUNCTION(BlueprintPure) uint8 GetDashCount() const {return DashCurrentCount;}
+	
 	bool CanDash() const;
 	void OnDashCooldown();
 	void PerformDash();
@@ -226,6 +237,7 @@ private:
 #pragma region Mantle
 public:
 	UFUNCTION(BlueprintPure) bool GetMantle() const;
+	
 	
 private:
 	bool TryMantle() ; 
